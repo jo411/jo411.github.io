@@ -1,0 +1,2341 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Relix</title>
+ <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
+</head>
+<style>
+#heart {
+}
+</style>
+<div>
+    <body bgcolor="#afafaf">
+    <script type="text/javascript">
+
+    var config = {
+        type: Phaser.AUTO,
+        width: 1920,
+        height: 1080,
+        physics: {
+            default: 'arcade',
+            arcade: {
+            gravity: { y: 0 },
+            debug: false
+        }
+        },
+
+        scene: {
+            init: init,
+            preload: preload,
+            create: create,
+            update: update
+        }
+    };
+
+    var game = new Phaser.Game(config);
+
+    var gameHasStarted =false;
+
+    var gameWidth = 800;
+    var gameHeight = 800;
+
+
+
+    var xBorderShift=(config.width-gameWidth)/2;//how far in to shift the game board from the screen width
+    var yBorderShift=(config.height-gameHeight)/2;
+
+    var xMin = xBorderShift;
+    var xMax = config.width-xBorderShift;
+
+    var yMin = yBorderShift;
+    var yMax = config.height-yBorderShift;
+
+    var player;
+    var redEmitter;
+    var blueEmitter;
+    var goingLeft=0; //0 Right, 1 Left, 2 up 3 down.
+
+    var bg;
+    var enemy;
+    var enemyWidth;
+    var enemySpeed=5;
+    var enemyLength=10;
+    var enemyDirectionX=1;
+    var enemyDirectionY=1;
+    var cursors;
+    var spacebar;
+    var enterButton;
+    var gameOver = false;
+    var input;
+    var slowSpeed = 2;
+    var fastSpeed = 2 * slowSpeed;
+    var border;
+    var drawMode = 0; //0: none 1:slow 2: fast
+    var isDrawing = false;
+    var playerIsMoving=false;
+    var canvas;
+    var whiteColor;
+    var _this;
+    var graphics;
+    var lineGraphics;
+    var shadowGraphics;
+    var shadowSprite;
+    var drawColor = 0xFFFFFF;
+    var score = 0;
+    var heart1, heart2, heart3;
+    var lives = 3;
+    var fuse;
+    var fuseMaxLength=100;//how many pixels between the fuse start and the player
+    var fusePositions=[];
+    var fuzeWaitCount=0;
+    var closingPointX;
+    var closingPointY;
+    var movingDir;
+    var scoreFactor=0;
+    var percentage = 0;
+    var goodSound;
+    var okaySound;
+    var badSound;
+    var drawSound1;
+    var drawSound2;
+    var hurtSound;
+    var captureSound;
+    var boneSound;
+    var boneBreakSound;
+    var bombDefuseSound;
+
+    var bones=[];
+    var numberOfBones=7;
+    var bonesFound=0;
+
+    var bombs=[];
+    var numberOfBombs=5;
+
+   var sparxs=[];
+   var numberOfSparx=3;
+   var sparxChance=30;
+
+
+    var scoreText;
+    var percentText;
+    var boneText;
+    var winText;
+
+    var backTex;
+    var frontTex;
+
+    var particleLayer=6;
+    var playerLayer=7;
+    var fossilLayer=2;
+    var UILayer=10;
+    var backLayer=1;
+    var shadowLayer=3;
+    var frontLayer=4;
+    var bombLayer = 5
+    var shovel;
+    var boneDeco1;
+    var boneDeco2;
+    var scoreText2;
+    var percentText2;
+
+    var shadowWidth=10;
+    var count = 0;
+    var title; //temp title
+    var winScreen;
+    var loseScreen;
+    var justStarted = true;
+    var bonusScore = 10000;
+    var punishScore = 20000;
+    var remainingPixels = gameWidth* gameHeight;
+
+    var useFullscreen=true;
+    var canvas;
+    var fullscreen;
+
+    var win = false;
+    var lose = false;
+    var soundBoom;
+    var music;
+
+    var controlSplashLength=150;
+    var controlSplashTimer=0;
+    var controlSplash;
+    var skippedControlSplash=false;
+    
+
+
+
+    //var segmentEnemy;
+
+
+    // TO GO: in the pixel filler to update score according to conquered pixel spaces
+    //
+    //scoreText.setText(score += pixelNum);
+function init()
+{
+  _this = this;
+  canvas = this.sys.game.canvas;
+  fullscreen = this.sys.game.device.fullscreen;
+  requestFullscreen();
+
+}
+
+    function preload ()
+    {
+        this.load.image('player', 'assets/player.png');
+        this.load.image('red', 'assets/red.png');
+        this.load.image('green', 'assets/green.png');
+        this.load.image('yellow', 'assets/yellow.png');
+        this.load.image('blue', 'assets/blue.png');
+        this.load.image('brown', 'assets/brown.png');
+        this.load.image('enemyHead','assets/enemyHead2.png');
+        this.load.image('enemyTail','assets/enemyBody2.png');
+        this.load.image('enemyBody','assets/enemyBody2.png');
+        this.load.image('sparx','assets/sparx.png')
+        this.load.image('heart', 'assets/heart.jpg');
+        this.load.image('back','assets/background.png');
+        this.load.image('front','assets/front.png');
+        this.load.image('bone1','assets/bone1.png');
+        this.load.image('bone2','assets/bone2.png');
+        this.load.image('bone3','assets/bone3.png');
+        this.load.image('bone1Buried','assets/bone1_buried.png');
+        this.load.image('bone2Buried','assets/bone2_buried.png');
+        this.load.image('bone3Buried','assets/bone3_buried.png');
+        this.load.image('bg', 'assets/background.png');
+        this.load.image('title', 'assets/Title.png'); //temp title
+        this.load.image('bomb','assets/bomb2.png');
+        this.load.image('bombBuried','assets/tnt_buried.png');
+        this.load.image('win','assets/win.png');
+        this.load.image('lose','assets/lose.png');
+        this.load.image('controlSplash', 'assets/controlSplash.png');
+        this.load.audio('music', 'assets/music.mp3');
+        this.load.audio('boom', 'assets/boom2.mp3');
+        this.load.audio('goodSound', 'assets/goodSound.mp3');
+        this.load.audio('okaySound', 'assets/okaySound.mp3');
+        this.load.audio('badSound', 'assets/badSound.mp3');
+        this.load.audio('drawSound1', 'assets/drawSound1.mp3');
+        this.load.audio('drawSound2', 'assets/drawSound2.mp3');
+        this.load.audio('hurtSound', 'assets/hurt.mp3');
+        this.load.audio('capture', 'assets/capture.wav');
+        this.load.audio('boneScore', 'assets/bone.wav');
+        this.load.audio('boneBreak', 'assets/boneBreak.wav');
+        this.load.audio('bombDefuse', 'assets/bombDefuse.wav');
+        
+    }
+
+    function create ()
+    {
+
+      graphics = this.add.graphics({ fillStyle: { color: 0x0000aa } });
+      initBoard();
+
+      music = this.sound.add('music');
+      music.volume = .7;
+      music.loop = true;
+      music.play();
+
+      soundBoom = this.sound.add('boom');
+      goodSound = this.sound.add('goodSound');
+      okaySound = this.sound.add('okaySound');
+      badSound = this.sound.add('badSound');
+      drawSound1 = this.sound.add('drawSound1');
+      drawSound2 = this.sound.add('drawSound2');
+      hurtSound = this.sound.add('hurtSound');
+      captureSound = this.sound.add('capture');
+      boneSound = this.sound.add('boneScore');
+      boneBreakSound = this.sound.add('boneBreak');
+      bombDefuseSound = this.sound.add('bombDefuse');
+
+    let border=10;
+      for(i=0;i<numberOfBones;i++)
+      {
+        let fossil1 = new fossil(this,randomIntFromInterval(xMin+border,xMax-border),randomIntFromInterval(yMin+border,yMax-border));
+        bones.push(fossil1);
+      }
+
+      for(i=0;i<numberOfBombs;i++)
+      {
+        let bomb1 = new bomb(this,randomIntFromInterval(xMin+border,xMax-border),randomIntFromInterval(yMin+border,yMax-border));
+        bombs.push(bomb1);
+      }
+
+      for(i=0;i<numberOfSparx;i++)
+      {
+        spawnRandomSparx(100);
+      }
+
+      //segmentEnemy = new enemyChain(this,config.width/2,config.height/2,enemyLength,enemySpeed);
+
+        whiteColor = new Phaser.Display.Color(100, 0, 0);
+        cursors = this.input.keyboard.createCursorKeys();
+        spacebar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        enterButton = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+        keys = this.input.keyboard
+
+        player = this.add.sprite(xBorderShift, yBorderShift, 'player').setOrigin(.48,.8);
+        let playerScale = 1.3;
+        player.setDisplaySize(player.width*playerScale, player.height*playerScale);
+        player.setDepth(playerLayer);
+        resetPlayerPosition();
+
+
+        enemy = new enemyChain(this,randomIntFromInterval(xMin,xMax),randomIntFromInterval(yMin,yMax), enemyLength);
+        //enemy.setDepth(playerLayer);
+        //enemy.alpha=0;
+        //player.alpha=0;
+
+        fuse = this.add.sprite(-100, -100, 'sparx');
+        fuse.alpha=0;
+
+        heart1 = this.add.sprite(945, 35, 'heart');
+        heart2 = this.add.sprite(970, 35, 'heart');
+        heart3 = this.add.sprite(995, 35, 'heart');
+        heart1.setDepth(UILayer);
+        heart2.setDepth(UILayer);
+        heart3.setDepth(UILayer);
+
+        scoreText = this.add.text(60, 25, 'Score: 0', { font: '50px monospace', fill: '#F9BFF7' });
+        percentText = this.add.text(1420, 25, 'Percentage: 0%', { font: '50px monospace', fill: '#F9BFF7' });
+        boneText = this.add.text(1420, 95, 'Fossils: 0/'+numberOfBones, { font: '50px monospace', fill: '#F9BFF7' });
+
+        scoreText.setDepth(UILayer);
+        percentText.setDepth(UILayer);
+        boneText.setDepth(UILayer);
+        //this.add.rectangle(0, 0, 100, 100, whiteColor.color);
+        enemyWidth = enemy.width;
+
+        lineGraphics = this.add.graphics({ fillStyle: { color: 0x0000aa } });
+        lineGraphics.setDepth(playerLayer);
+
+        shadowGraphics = this.add.graphics({ fillStyle: { color: 0x000000, alpha: 0.3 } });
+        shadowGraphics.setDepth(shadowLayer);
+
+        bg = this.add.sprite(0, 0, 'bg').setOrigin(0,0);
+        bg.setDepth(UILayer);
+
+        controlSplash = this.add.sprite(0, 0, 'controlSplash').setOrigin(0,0);
+        controlSplash.setDepth(UILayer);
+        controlSplash.setScale(1.5);
+        controlSplash.visible=false;
+
+        //bg.setScale(2.0);
+        title = this.add.sprite(300, 100, 'title').setOrigin(0,0);
+        title.setScale(.7);
+        title.setDepth(UILayer);
+        winScreen = this.add.sprite(300, 100, 'win').setOrigin(0,0);
+        winScreen.setScale(.7);
+        winScreen.setDepth(UILayer);
+        loseScreen = this.add.sprite(300, 100, 'lose').setOrigin(0,0);
+        loseScreen.setScale(.7);
+        loseScreen.setDepth(UILayer);
+        winScreen.visible = false;
+        loseScreen.visible = false;
+        shovel = this.add.sprite(570, 630, 'player').setOrigin(0,0);
+        shovel.setDepth(UILayer);
+        shovel.setScale(2.2);
+        shovel.flipX = true;
+        boneDeco1 = this.add.sprite(1240, 650, 'bone2').setOrigin(0,0);
+        boneDeco1.setDepth(UILayer);
+        boneDeco1.setScale(2.4);
+        boneDeco1.flipX = true;
+
+        scoreText2 = this.add.text(60, 25, 'Score: 0', { font: '50px monospace', fill: '#F9BFF7' });
+        percentText2 = this.add.text(1460, 25, 'Percentage: 0%', { font: '50px monospace', fill: '#F9BFF7' });
+        scoreText2.visible = false;
+        percentText2.visible = false;
+        scoreText2.setDepth(0);
+        percentText2.setDepth(0);
+
+        //  The score
+        //scoreText.sendToFront();
+
+        let scale=1.56;
+        backTex = this.add.sprite(0, 0, 'back').setOrigin(0,0);
+
+        backTex.setDisplaySize(config.width,config.height);
+        backTex.setDepth(backLayer);
+
+        frontTex = this.add.sprite(xBorderShift, yBorderShift, 'front').setOrigin(0,0);
+        frontTex.setDisplaySize(frontTex.width*scale,frontTex.height*scale);
+        frontTex.mask = new Phaser.Display.Masks.BitmapMask(this, graphics);
+        frontTex.setDepth(frontLayer);
+
+        //graphics.fillRectShape(new Rectangle(xBorderShift,yBorderShift,config.width-xBorderShift,config.height -yBorderShift));
+
+
+
+        var blueParticles = this.add.particles('blue');
+         blueEmitter = blueParticles.createEmitter({
+            speed: 50,
+            scale: { start: .2, end: .02 },
+            blendMode: 'ADD'
+        });
+        blueParticles.setDepth(particleLayer);
+
+        blueEmitter.startFollow(player);
+        blueEmitter.visible=false;
+
+        var redParticles = this.add.particles('red');
+           redEmitter = redParticles.createEmitter({
+            speed: 30,
+            frequency:50,
+            scale: { start: .2, end: .02 },
+            blendMode: 'ADD'
+        });
+        redParticles.setDepth(particleLayer);
+        redEmitter.visible=false;
+
+        redEmitter.startFollow(player);
+
+        var particles2 = this.add.particles('red');
+
+        var emitter2 = particles2.createEmitter({
+            speed: 15,
+            scale: { start: .5, end: .01 },
+            blendMode: 'ADD'
+        });
+
+        particles2.setDepth(particleLayer);
+
+         var fusePart = this.add.particles('yellow');
+
+        var fuseEmitter = fusePart.createEmitter({
+            speed: 10,
+            scale: { start: .08, end: .04 },
+            blendMode: 'ADD'
+        });
+
+        fusePart.setDepth(particleLayer);
+
+        emitter2.startFollow(enemy);
+        emitter2.visible=false;
+
+        fuseEmitter.startFollow(fuse);
+
+        drawBorders();
+
+
+        // shadowGraphics = graphics.generateTexture("shadow");
+        // shadowSprite = this.add.sprite(0,0,"shadow");
+        // shadowSprite.setDepth(shadowLayer);
+        // shadowSprite.mask = new Phaser.Display.Masks.BitmapMask(this, graphics);
+
+        floodFill(enemy.x,enemy.y);
+
+    //  if (justStarted == true) {
+
+    //  }
+
+    }
+
+
+function requestFullscreen()
+{
+  if (!fullscreen.available || !useFullscreen)
+    {
+        return;
+    }
+
+    canvas[fullscreen.request]();
+}
+
+function randomIntFromInterval(min, max)
+{ // min and max included
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+function getRandomPointOnBorder()
+{
+  let found=false;
+  letx=0;
+  lety=0;
+  let count=0;
+  let dir=1;
+
+while(!found)
+{
+  count++;
+  if(count>15)
+  {
+    break;
+  }
+  if(Math.random()*100>=50)
+  {
+    dir=-1;
+  }
+
+
+    x = Math.round(randomIntFromInterval(xMin,xMax));
+    y = Math.round(randomIntFromInterval(yMin,yMax));
+    console.log(x+' '+y);
+    for(row=y;row<config.height && row>=0;row+=dir)
+    {
+      for(col=x;col<config.width && col>=0;col+=dir)
+      {
+        if(border[get1DIndex(row,col)]==1)
+        {
+          return [col,row];
+        }
+      }
+  }
+}
+
+  return [xBorderShift,yBorderShift];
+}
+
+function update ()
+{
+  //console.log(player.x);
+  //console.log(player.y);
+    if (justStarted == true && Phaser.Input.Keyboard.JustDown(enterButton)) {
+        justStarted = false;
+        title.visible = false;
+        bg.visible = false;
+        shovel.visible = false;
+        boneDeco1.visible = false;
+        console.log("Entered");
+        gameHasStarted=true;
+        controlSplash.visible=true;
+    }
+    
+if(controlSplashTimer<controlSplashLength&&skippedControlSplash && gameHasStarted)
+{
+  controlSplashTimer++;
+  let percent = 1-controlSplashTimer/controlSplashLength;   
+  controlSplash.alpha=percent;
+}else if(!skippedControlSplash)
+{
+  if(Phaser.Input.Keyboard.JustDown(enterButton))
+     {
+      skippedControlSplash=true;
+     }
+  return;
+}
+
+
+
+   
+  if(controlSplashTimer<controlSplashLength && gameHasStarted)
+  {    
+   
+    return;
+  }else
+  {
+    controlSplash.visible=false;
+  }
+  
+
+    if (win)
+    {
+      bg.visible = true;
+     // scoreText2.visible = true;
+     // percentText2.visible = true;
+
+        scoreText.setDepth(UILayer+1);
+        percentText.setDepth(UILayer+1);
+        boneText.setDepth(UILayer+1);
+      if (Phaser.Input.Keyboard.JustDown(enterButton))
+      {
+        location.reload();
+      }
+      return;
+    }
+
+    if (lose)
+    {
+      scoreText.setDepth(UILayer+1);
+        percentText.setDepth(UILayer+1);
+        boneText.setDepth(UILayer+1);
+      console.log("You lose");
+      if (Phaser.Input.Keyboard.JustDown(enterButton))
+      {
+        location.reload();
+        console.log("downdowndown");
+      }
+      return;
+    }
+
+
+    if(!gameHasStarted)
+    {
+      return;
+    }
+
+    if (count == 3) {
+      drawSound1.stop();
+      drawSound2.stop();
+      badSound.volume = .8;
+      badSound.play();
+      loseScreen.visible = true;
+      lose = true;
+      bg.visible = true;
+      scoreText2.visible = true;
+      percentText2.visible = true;
+      //location.reload();
+      count = 0;
+    }
+
+    if(Phaser.Input.Keyboard.JustDown(spacebar) && !isDrawing)
+    {
+        drawMode++;
+        drawMode %= 3;
+        console.log(drawMode);
+        if (drawMode == 1) {
+          drawSound2.pause();
+          drawSound1.volume = .7;
+          drawSound1.play();
+          music.volume=.5;
+        }
+        if (drawMode == 2) {
+          drawSound1.pause();
+          drawSound2.volume = .7;
+          drawSound2.play();
+          music.volume=.5;
+        }
+    }
+    updatePlayerParticles();
+
+    handleMove();
+    //enemy.update();
+    //updateEnemy();
+
+    if (drawMode < 1) {
+      drawSound1.pause();
+      drawSound2.pause();
+      music.volume=.7;
+      
+    }
+}
+
+function spawnRandomSparx(chance)
+{
+  if(randomIntFromInterval(1,100)<=chance)
+  {
+    let point =getRandomPointOnBorder();
+    let newSparx = new sparx(_this,point[0],point[1]);
+    sparxs.push(newSparx);
+  }
+
+}
+
+function updatePlayerParticles()
+{
+  if(drawMode==0)
+  {
+    redEmitter.visible=false;
+    blueEmitter.visible=false;
+  }else if(drawMode==1)
+  {
+    redEmitter.visible=true;
+  }else if(drawMode==2)
+  {
+    redEmitter.visible=false;
+    blueEmitter.visible=true;
+  }
+
+}
+
+function updateEnemy()
+{
+  segmentEnemy.update();
+
+    // for(i=0;i<enemySpeed;i++)
+    // {
+    //     var newCol= enemy.x+enemyDirectionX;
+    //     var newRow = enemy.y+enemyDirectionY;
+    //     if(onBorder(newRow,newCol))
+    //     {
+    //         if((Math.random()*100)<=50)
+    //         {
+    //           enemyDirectionX=-enemyDirectionX;
+    //          }else
+    //          {
+    //          enemyDirectionY=-enemyDirectionY;
+    //          }
+    //     }else
+    //     {
+    //         enemy.x=newCol;
+    //         enemy.y=newRow;
+    //     }
+
+    //     if(isTemporary(enemy.y,enemy.x))
+    //     {
+    //         killPlayer();
+    //     }
+    // }
+
+    // if((Math.random()*100)<=1)
+    // {
+    //     if((Math.random()*100)<=50)
+    //     {
+    //         enemyDirectionX=-enemyDirectionX;
+    //     }else
+    //     {
+    //         enemyDirectionY=-enemyDirectionY;
+    //     }
+    // }
+    // if(enemyDirectionX>0)
+    // {
+    //   if(enemyDirectionY>0)
+    //   {
+    //     enemy.rotation=135*(Math.PI/180);
+
+    //   }else
+    //   {
+    //     enemy.rotation=45*(Math.PI/180);
+    //   }
+
+    // }else
+    // {
+    //   if(enemyDirectionY>0)
+    //   {
+    //     enemy.rotation=225*(Math.PI/180);
+    //   }else
+    //   {
+    //     enemy.rotation=315*(Math.PI/180);
+
+    //   }
+
+    // }
+
+
+
+
+
+}
+
+//THIS IS TOTALLY BROKEN
+function rectOnBorder(topLeftRow, topLeftCol,width)
+{
+    for(i=0;i<width;i++)
+    {
+        for(j=0;j<width;j++)
+        {
+            if(withinScreen(topLeftRow+i,topLeftRow+j) && onBorder(topLeftRow+i,topLeftRow+j))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function get1DIndex(row,col)
+{
+    if(row < 0 || col < 0)
+    {
+        return -1;
+    }
+    else if(row >= config.height, col >= config.width)
+    {
+        return -1;
+    }
+
+    return row * config.width + col;
+}
+
+function initBoard()
+{
+
+    border = new Int8Array(config.width*config.height);
+
+    for(col = xMin; col < xMax; col++)
+    {
+        for(row = yMin; row < yMax; row++)
+        {
+           // console.log(get1DIndex(row,col));
+            border[get1DIndex(row, col)] = 0;
+
+        }
+    }
+
+    // Drawing border
+    graphics.lineStyle(2, 0xFFFFFF, 1.0);
+    graphics.beginPath();
+    graphics.moveTo(xBorderShift,yBorderShift);
+    graphics.lineTo(xBorderShift, config.height-yBorderShift);
+    graphics.closePath();
+    graphics.strokePath();
+    graphics.lineStyle(2, 0xFFFFFF, 1.0);
+    graphics.beginPath();
+    graphics.moveTo(xBorderShift,yBorderShift);
+    graphics.lineTo(config.width-xBorderShift, yBorderShift);
+    graphics.closePath();
+    graphics.strokePath();
+    graphics.lineStyle(2, 0xFFFFFF, 1.0);
+    graphics.beginPath();
+    graphics.moveTo(config.width-xBorderShift, yBorderShift);
+    graphics.lineTo(config.width-xBorderShift, config.height-yBorderShift);
+    graphics.closePath();
+    graphics.strokePath();
+    graphics.lineStyle(2, 0xFFFFFF, 1.0);
+    graphics.beginPath();
+    graphics.moveTo(config.width-xBorderShift, config.height-yBorderShift);
+    graphics.lineTo(xBorderShift, config.height-yBorderShift);
+    graphics.closePath();
+    graphics.strokePath();
+
+
+    for(i=xMin;i<=xMax;i++)
+    {
+       border[get1DIndex(yMin, i)] = 1;
+    }
+
+    for(i=yMin;i<=yMax;i++)
+    {
+        border[get1DIndex(i, xMin)] = 1;
+    }
+
+    for(i=yMin;i<=yMax;i++)
+    {
+        border[get1DIndex(i, xMax)] = 1;
+    }
+
+    for(i=xMin;i<=xMax;i++)
+    {
+        border[get1DIndex(yMax, i)] = 1;
+    }
+}
+
+
+function checkPlayerCollision()
+{
+ // console.log(sparxs.length);
+  sparxs.forEach(element => {
+    if(element.x==player.x && element.y==player.y)
+    {
+      console.log("die");
+      killPlayer();
+    }
+  });
+}
+
+
+function drawBorders()
+{
+    for(col = 0; col < config.width; col++)
+    {
+        for(row = 0;row < config.height; row++)
+        {
+            var point = border[get1DIndex(row, col)];
+            if(point == 1  || point == 2 )
+            {
+                fillPixel(0xFFFFFF, col, row,lineGraphics);
+            }
+
+        }
+    }
+}
+
+function handleMove()
+{
+    let speed = 0;
+    if(drawMode == 0)
+    {
+        speed = fastSpeed;
+    }
+    else if(drawMode == 1)
+    {
+        speed = slowSpeed;
+        drawColor = 0xFF0000;
+    }
+    else if(drawMode == 2)
+    {
+        speed = fastSpeed;
+        drawColor = 0x0000FF;
+
+    }
+
+    for(i = 0; i < speed; i++)
+    {
+        playerIsMoving=true;
+
+        let reachedMinPosition = false;
+        var newCol = player.x;
+        var newRow = player.y;
+
+        if (cursors.left.isDown)
+        {
+          player.rotation=0;
+            newCol -= 1;
+            player.flipX=false;
+            goingLeft=true;
+        }
+        else if (cursors.right.isDown)
+        {
+          player.rotation=0;
+            newCol += 1;
+            player.flipX=true;
+            goingLeft=false;
+        }
+        else if (cursors.up.isDown)
+        {
+          /*if(goingLeft)
+          {
+            player.rotation=Math.PI/2;
+          }else
+          {
+            player.rotation=-Math.PI/2;
+          }*/
+
+
+            newRow -= 1;
+
+        }
+        else if (cursors.down.isDown)
+        {
+          /*if(goingLeft)
+          {
+            player.rotation=-Math.PI/2;
+          }else
+          {
+            player.rotation=Math.PI/2;
+          }*/
+
+
+            newRow += 1;
+        }
+        else
+        {
+            playerIsMoving=false;
+            checkPlayerCollision();
+            break;
+        }
+
+
+        if(drawMode == 0) //;free move mode
+        {
+            if(onBorder(newRow,newCol))
+            {
+                player.x=newCol;
+                player.y=newRow;
+                reachedMinPosition=true;
+                checkPlayerCollision();
+            }
+
+
+        }
+        else //drawing mode
+        {
+            if(!isDrawing)
+            {
+                if(withinScreen(newRow,newCol) && !isCaptured(newRow, newCol) && !onBorder(newRow, newCol) && border[get1DIndex(newRow, newCol)] != 0) //Player is leaving a border
+                {
+                    console.log("Starting Drawing");
+                    //borderBackup = border.slice(0); //Backup the current borders in case the player dies and this line will be removed
+
+                    player.x = newCol;
+                    player.y = newRow;
+
+                    isDrawing = true;
+                    addPlayerPositionToBorder();
+                }
+                else //stay still this would be an invalid position
+                {
+                    reachedMinPosition=true;
+                }
+            }
+            else//already drawing
+            {
+                if(onBorder(newRow,newCol))//player reached a border
+                {
+                  closingPointX = player.x;
+                  closingPointY = player.y;
+                  if (newCol - player.x != 0)
+                  {
+                    movingDir = 0;
+                  }
+                  else
+                  {
+                    movingDir = 1;
+                  }
+
+                    player.x = newCol;
+                    player.y = newRow;
+                    reachedMinPosition = true;
+                    if (drawMode == 1)
+                    {
+                      scoreFactor = 2;
+                    }
+                    else if (drawMode == 2)
+                    {
+                      scoreFactor = 1;
+                    }
+
+                    isDrawing = false;
+
+                    processCapture();
+                    drawMode = 0;
+                }else if(!isTemporary(newRow,newCol))//player is still drawing move them along as long as they don't cross their own path
+                {
+                    //THIS IS TEMPORARY LINE BREAKS THINGS
+                    player.x=newCol;
+                    player.y=newRow;
+                    addPlayerPositionToBorder();
+                }else//stay still this would be an invalid position
+                {
+                    reachedMinPosition=true;
+                }
+            }
+
+            reachedMinPosition = true;
+        }
+    }
+
+if(isDrawing && !playerIsMoving)
+{
+    console.log("Penalty");
+    updateFuse();
+}else
+{
+    hideFuse();
+}
+
+}
+function clearFuse()
+{
+
+}
+function hideFuse()
+{
+    fuse.x=-9999;
+    fuse.y=-9999;
+
+}
+function updateFuse()
+{
+
+    let newX = fusePositions.shift();
+    let newY=fusePositions.shift();
+    fuse.x=newX;
+    fuse.y=newY
+
+      if(fuse.x==player.x && fuse.y == player.y)
+      {
+          killPlayer();
+      }
+
+}
+
+function isTemporary(row, col)
+{
+    return (border[get1DIndex(row,col)]==2);
+}
+
+function addPlayerPositionToBorder() //Adds the current player position onto the border as a temporary point
+{
+    border[get1DIndex(player.y, player.x)] = 2;
+    fillPixel(player.x, player.y, drawColor,lineGraphics);
+
+    if(fusePositions.length/2>=fuseMaxLength)
+    {
+        fusePositions.shift();
+        fusePositions.shift();
+    }
+    fusePositions.push(player.x);
+    fusePositions.push(player.y);
+
+}
+
+function addAllTemporaryBorders()
+{
+    for(col = xMin; col <= xMax; col++)
+    {
+        for(row = yMin;row <= yMax; row++)
+        {
+            //console.log(get1DIndex(row,col));
+            if(border[get1DIndex(row, col)] == 2)
+            {
+                border[get1DIndex(row, col)] = 1;
+            }
+        }
+    }
+    lineGraphics.clear();
+}
+
+function removeAllTemporaryBorders()
+{
+  for(col = xMin; col <= xMax; col++)
+    {
+        for(row = yMin;row <= yMax; row++)
+        {
+            //console.log(get1DIndex(row,col));
+            if(border[get1DIndex(row, col)] == 2)
+            {
+                border[get1DIndex(row, col)] = 0;
+            }
+        }
+    }
+    lineGraphics.clear();
+}
+
+function processCapture(bomb=false)//player has completed a square, process it
+{
+
+if(!bomb)
+{
+    captureSound.volume=.5;
+   
+    graphics.clear();
+    shadowGraphics.clear();
+    console.log("Done Drawing!");
+    addAllTemporaryBorders();
+    let startPoint = checkWhichPointToFill();
+    floodFill(startPoint[0], startPoint[1]);
+    recalcBorders();
+    captureSound.play();
+   //printBorders();
+}else
+{  
+    graphics.clear();
+    shadowGraphics.clear();
+    addAllTemporaryBorders();
+    floodFill(enemy.x,enemy.y);
+    recalcBorders();
+
+}
+spawnRandomSparx(sparxChance);
+
+}
+function recalcBorders()
+{
+
+    let borderCopy = border.slice(0);//backup the border
+    console.log(border[get1DIndex(yMin+1,xMin+1)]);
+
+    let newBorders =borderFloodFill(borderCopy,enemy.y,enemy.x);
+    //console.log(newBorders);
+    //console.log(newBorders.length);
+
+    for(col = xMin; col <= xMax; col++)
+    {
+        for(row = yMin;row <= yMax; row++)
+        {
+          if (border[get1DIndex(row,col)] != -1)
+          {
+            border[get1DIndex(row,col)]=0;
+          }
+        }
+    }
+
+    while(newBorders.length>0)
+    {
+        let newY = newBorders.pop();
+        let newX = newBorders.pop();
+        border[get1DIndex(newY,newX)]=1;
+    }
+
+}
+
+function resetEnemyArea()
+{
+    for(col = xMin; col < xMax; col++)
+    {
+        for(row = yMin;row < yMax; row++)
+        {
+          if (border[get1DIndex(row,col)] != 1)
+          {
+            border[get1DIndex(row,col)]=0;
+          }
+        }
+    }
+}
+
+
+
+function borderFloodFill(data,row,col)
+{
+  console.log("flood start (border)");
+
+    let replaceVal=3;
+
+    console.log(data[get1DIndex(row,col)]);
+    data[get1DIndex(row,col)]=replaceVal;
+
+    let Qx=[];
+    let Qy=[];
+
+    let newBorders = [];
+
+    Qx.push(col);
+    Qy.push(row);
+
+
+    while(!Qx.length==0 && !Qy.length==0)
+    {
+
+        let nx = Qx.shift();
+        let ny = Qy.shift();
+
+
+        let north = ny-1;
+        let south = ny+1;
+        let east = nx+1;
+        let west = nx-1;
+
+
+        if(data[get1DIndex(north,nx)]==1)//if a neighbor is a border it is part of the new borders
+        {
+            newBorders.push(nx);
+            newBorders.push(north);
+
+        }else if (data[get1DIndex(north,nx)]==-1)//otherwise keep floodfilling
+        {
+            data[get1DIndex(north,nx)]=replaceVal;
+            Qx.push(nx);
+            Qy.push(north);
+        }
+
+        if(data[get1DIndex(south,nx)]==1)
+        {
+            newBorders.push(nx);
+            newBorders.push(south);
+        }else if(data[get1DIndex(south,nx)]==-1)
+        {
+            data[get1DIndex(south,nx)]=replaceVal;
+            Qx.push(nx);
+            Qy.push(south);
+        }
+
+        if(data[get1DIndex(ny,east)]==1)
+        {
+            newBorders.push(east);
+            newBorders.push(ny);
+
+        }else if(data[get1DIndex(ny,east)]==-1)
+        {
+            data[get1DIndex(ny,east)]=replaceVal;
+            Qx.push(east);
+            Qy.push(ny);
+        }
+
+        if(data[get1DIndex(ny,west)]==1)
+        {
+            newBorders.push(west);
+            newBorders.push(ny);
+        }else if(data[get1DIndex(ny,west)]==-1)
+        {
+            data[get1DIndex(ny,west)]=replaceVal;
+            Qx.push(west);
+            Qy.push(ny);
+        }
+
+
+        if(data[get1DIndex(north,west)]==1)
+        {
+            newBorders.push(west);
+            newBorders.push(north);
+        }
+
+
+        if(data[get1DIndex(north,east)]==1)
+        {
+            newBorders.push(east);
+            newBorders.push(north);
+        }
+
+
+        if(data[get1DIndex(south,east)]==1)
+        {
+            newBorders.push(east);
+            newBorders.push(south);
+        }
+
+        if(data[get1DIndex(south,west)]==1)
+        {
+            newBorders.push(west);
+            newBorders.push(south);
+        }
+    }
+    console.log("flood stop (border)");
+
+    return newBorders;
+}
+
+function checkWhichPointToFill()
+{
+
+//TESTING
+return [enemy.x,enemy.y];
+
+  if (movingDir == 0)
+  {
+    if (checkCaptured(closingPointX, closingPointY + 1))
+    {
+      return [closingPointX, closingPointY + 1];
+    }
+    else
+    {
+      return [closingPointX, closingPointY - 1];
+    }
+  }
+  else if (movingDir == 1)
+  {
+    if (checkCaptured(closingPointX + 1, closingPointY))
+    {
+      return [closingPointX + 1, closingPointY];
+    }
+    else
+    {
+      return [closingPointX - 1, closingPointY];
+    }
+  }
+}
+
+function checkCaptured(x, y)
+{
+  if (onBorder(y, x))
+  {
+    return;
+  }
+
+  if (enemy.x == x && enemy.y == y)
+  {
+    return false;
+  }
+
+  var queue = [];
+  var set = [];
+
+  queue.push(x);
+  queue.push(y);
+
+  set[get1DIndex(y, x)] = 1;
+
+  while (queue.length > 0)
+  {
+    var tempX = queue.shift();
+    var tempY = queue.shift();
+
+    if (enemy.x == tempX && enemy.y == tempY)
+    {
+      return false;
+    }
+
+    if (!onBorder(tempY + 1, tempX) && set[get1DIndex(tempY + 1, tempX)] != 1)
+    {
+      set[get1DIndex(tempY + 1, tempX)] = 1;
+      queue.push(tempX);
+      queue.push(tempY + 1);
+    }
+
+    if (!onBorder(tempY - 1, tempX) && set[get1DIndex(tempY - 1, tempX)] != 1)
+    {
+      set[get1DIndex(tempY - 1, tempX)] = 1;
+      queue.push(tempX);
+      queue.push(tempY - 1);
+    }
+
+    if (!onBorder(tempY, tempX + 1) && set[get1DIndex(tempY, tempX + 1)] != 1)
+    {
+      set[get1DIndex(tempY, tempX + 1)] = 1;
+      queue.push(tempX + 1);
+      queue.push(tempY);
+    }
+
+    if (!onBorder(tempY, tempX - 1) && set[get1DIndex(tempY, tempX - 1)] != 1)
+    {
+      set[get1DIndex(tempY, tempX - 1)] = 1;
+      queue.push(tempX - 1);
+      queue.push(tempY);
+    }
+  }
+
+  return true;
+}
+
+function printBorders()
+{
+    for(col = 0; col < config.width; col++)
+    {
+        for(row = 0;row < config.height; row++)
+        {
+          if(border[get1DIndex(row,col)]==1)
+          {
+              console.log(row+" "+col);
+          }
+        }
+    }
+}
+
+function isCaptured(row, col)//Will eventually tell whether this point has been captured
+{
+    return false;
+}
+
+function withinScreen(row, col)
+{
+    if(row < yMin || col < xMin)
+    {
+        return false;
+    }
+    else if(row > yMax || col > xMax)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+function onBorder(row, col)
+{
+    //console.log(row+" "+col);
+    if( border[get1DIndex(row,col)]==1)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+function fillPixel(x, y, color, graphicsObj)
+{
+  var rect = new Phaser.Geom.Rectangle(x, y, 1, 1);
+  //rect.setDepth(UILayer);
+  graphicsObj.fillStyle(color, 1.0);
+  graphicsObj.fillRectShape(rect);
+}
+
+function killPlayer()
+{
+  hurtSound.volume = .5;
+  hurtSound.play();
+    if (count == 0) {
+      heart1.visible = false;
+      player.x = player.x;
+      player.y = player.y;
+      count++; // lives used
+      resetPlayerPosition();
+      removeAllTemporaryBorders();
+    } else if (count == 1) {
+      heart2.visible = false;
+      player.x = player.x;
+      player.y = player.y;
+      count++;
+      resetPlayerPosition();
+      removeAllTemporaryBorders();
+    } else if (count == 2) {
+      count++;
+      heart3.visible = false;
+      player.x=-999;
+      player.y=-999;
+      enemySpeed=0;
+      removeAllTemporaryBorders();
+    }
+}
+
+function resetPlayerPosition()
+{
+  drawMode=0;
+  isDrawing=false;
+  if(border[get1DIndex(yMin,gameWidth/2 + xMin)]==1)
+  {
+    player.x=gameWidth/2 + xMin;
+    player.y=yMin;
+  }else
+  {
+    let point = getRandomPointOnBorder();
+    player.x=point[0];
+    player.y=point[1];
+  }
+
+
+}
+
+function checkAllBonesCollected()
+{
+  let temp = true;
+  bones.forEach(function(element)
+  {
+    if (!element.detected)
+    {
+      temp = false;
+    }
+  });
+
+  return temp;
+}
+
+function checkUncover()
+{
+  bones.forEach(function(element)
+  {
+    if (!element.detected && element.visible)
+    {
+      let rec = element.getBounds();
+      let recLeft = Math.round(rec.left);
+      let recRight = Math.round(rec.right);
+      let recTop = Math.round(rec.top);
+      let recBottom = Math.round(rec.bottom);
+
+      if ((border[get1DIndex(recTop, recLeft)] != -1) && (border[get1DIndex(recTop, recRight)] != -1) && (border[get1DIndex(recBottom, recLeft)] != -1) && (border[get1DIndex(recBottom, recRight)] != -1))
+      {
+        boneSound.volume=.5;
+        boneSound.play();
+        score += bonusScore;
+        element.detected = true;
+        element.coverSprite.visible=false;
+        element.spEmitter.visible=true;
+        bonesFound++;
+        boneText.setText('Fossils: ' + bonesFound +"/"+numberOfBones);
+
+      }
+    }
+  });
+
+  bombs.forEach(function(element)
+  {
+    if (!element.detected && element.visible)
+    {
+      let rec = element.getBounds();
+      let recLeft = Math.round(rec.left);
+      let recRight = Math.round(rec.right);
+      let recTop = Math.round(rec.top);
+      let recBottom = Math.round(rec.bottom);
+
+      if ((border[get1DIndex(recTop, recLeft)] != -1) && (border[get1DIndex(recTop, recRight)] != -1) && (border[get1DIndex(recBottom, recLeft)] != -1) && (border[get1DIndex(recBottom, recRight)] != -1))
+      {
+        element.coverSprite.setDepth(0);
+        if (drawMode == 2)
+        {
+          console.log("boooooooooooooom");
+          element.explode();
+          //music.stop();
+          //soundEffects.play();
+        //  soundEffects.stop();
+        }
+        else
+        {
+          console.log("mooooooooooooooob");
+          element.detected = true;
+          element.spEmitter.visible=false;
+          bombDefuseSound.volume=.5;
+          bombDefuseSound.play();
+        }
+        //element.visible = false;
+      }
+    }
+    });
+}
+
+function floodFill(x, y, countsForPoints=true)
+{
+  console.log("flood start");
+  let count=0;
+  resetEnemyArea();
+  let tempScore = 0;
+
+  if (onBorder(y, x) || !withinScreen(y,x))
+  {
+    return;
+  }
+
+  //graphics.fillPoint(x, y);//Is this needed?
+
+  let queue = [];
+  let set = new Int8Array(border.length);
+
+  queue.push(x);
+  queue.push(y);
+
+  set[get1DIndex(y, x)] = 1;
+  border[get1DIndex(y, x)] = -1;
+
+  let shapeBorderSet = new Uint8Array(border.length);
+  let startingX = x;
+  let startingY = y;
+
+  tempScore++;
+
+  while (queue.length > 0)
+  {
+    if(queue.length>count)
+    {
+      count = queue.length;
+    }
+
+   // console.log("loop");
+    let tempX = queue.shift();
+    let tempY = queue.shift();
+
+    if (!onBorder(tempY + 1, tempX) && set[get1DIndex(tempY + 1, tempX)] != 1)
+    {
+      tempScore++;
+      //graphics.fillPoint(tempX, tempY + 1);
+      set[get1DIndex(tempY + 1, tempX)] = 1;
+      queue.push(tempX);
+      queue.push(tempY + 1);
+      border[get1DIndex(tempY + 1, tempX)] = -1;
+    }
+    else if (onBorder(tempY + 1, tempX))
+    {
+      shapeBorderSet[get1DIndex(tempY, tempX)] = 1;
+      if (tempX > startingX)
+      {
+        startingX = tempX;
+        startingY = tempY;
+      }
+    }
+
+    if (!onBorder(tempY - 1, tempX) && set[get1DIndex(tempY - 1, tempX)] != 1)
+    {
+      tempScore++;
+      //graphics.fillPoint(tempX, tempY - 1);
+      set[get1DIndex(tempY - 1, tempX)] = 1;
+      queue.push(tempX);
+      queue.push(tempY - 1);
+      border[get1DIndex(tempY - 1, tempX)] = -1;
+    }
+    else if (onBorder(tempY - 1, tempX))
+    {
+      shapeBorderSet[get1DIndex(tempY, tempX)] = 1;
+      if (tempX > startingX)
+      {
+        startingX = tempX;
+        startingY = tempY;
+      }
+    }
+
+    if (!onBorder(tempY, tempX + 1) && set[get1DIndex(tempY, tempX + 1)] != 1)
+    {
+      tempScore++;
+      //graphics.fillPoint(tempX + 1, tempY);
+      set[get1DIndex(tempY, tempX + 1)] = 1;
+      queue.push(tempX + 1);
+      queue.push(tempY);
+      border[get1DIndex(tempY, tempX + 1)] = -1;
+    }
+    else if (onBorder(tempY, tempX + 1))
+    {
+      shapeBorderSet[get1DIndex(tempY, tempX)] = 1;
+      if (tempX > startingX)
+      {
+        startingX = tempX;
+        startingY = tempY;
+      }
+    }
+
+    if (!onBorder(tempY, tempX - 1) && set[get1DIndex(tempY, tempX - 1)] != 1)
+    {
+      tempScore++;
+      //graphics.fillPoint(tempX - 1, tempY);
+      set[get1DIndex(tempY, tempX - 1)] = 1;
+      queue.push(tempX - 1);
+      queue.push(tempY);
+      border[get1DIndex(tempY, tempX - 1)] = -1;
+    }
+    else if (onBorder(tempY, tempX - 1))
+    {
+      shapeBorderSet[get1DIndex(tempY, tempX)] = 1;
+      if (tempX > startingX)
+      {
+        startingX = tempX;
+        startingY = tempY;
+      }
+    }
+  }
+
+console.log("End loop");
+console.log("---------"+count+" Iterations----------");
+  checkUncover();
+
+if(countsForPoints)
+{
+  score += Math.round(scoreFactor * (remainingPixels - tempScore) / 100);
+  remainingPixels = tempScore;
+}
+
+  scoreText.setText('Score: ' + score);
+  percentText.setText('Percentage: ' + Math.round(100 - remainingPixels / (gameWidth * gameHeight) * 100) + '/75%');
+  scoreText2.setText('Score: ' + score);
+  percentText2.setText('Percentage: ' + Math.round(100 - remainingPixels / (gameWidth * gameHeight) * 100) + '%');
+ // console.log(percentage);
+
+  //console.log(percentage / (config.width * config.height));
+
+  //console.log(config.width * config.height);
+
+  // TEMPORARY: win text
+  if (remainingPixels / (gameWidth * gameHeight) < 0.25)
+  {
+    if (checkAllBonesCollected())
+    {
+      drawSound1.stop();
+      drawSound2.stop();
+      winScreen.visible = true;
+      win = true;
+      goodSound.volume = .8;
+      gooSound.loopCount(2);
+      goodSound.play();
+      //_this.add.text(175, 230, 'You Win!', { font: '40px monospace', fill: '#ffffff' });
+    }
+  }
+
+  var checkingDir;
+  var runningX;
+  var runningY;
+
+  //console.log(startingX);
+  //console.log(startingY);
+
+  if (shapeBorderSet[get1DIndex(startingY, startingX + 1)] == 1)
+  {
+    //console.log("right");
+    checkingDir = 0;
+    runningX = startingX + 1;
+    runningY = startingY;
+  }
+  /*else if (shapeBorderSet[get1DIndex(startingY, startingX - 1)] == 1)
+  {
+    //console.log("left");
+    checkingDir = 1;
+    runningX = startingX - 1;
+    runningY = startingY;
+  }*/
+  else// if (shapeBorderSet[get1DIndex(startingY + 1, startingX)] == 1)
+  {
+    //console.log("up");
+    checkingDir = 2;
+    runningX = startingX;
+    runningY = startingY;
+  }
+  /*else if (shapeBorderSet[get1DIndex(startingY - 1, startingX)] == 1)
+  {
+    //console.log("down");
+    checkingDir = 3;
+    runningX = startingX;
+    runningY = startingY - 1;
+  }*/
+
+  var corners = [];
+  var shadowCorners = [];
+
+  //corners.push(new Phaser.Geom.Point(startingX, startingY));
+  //shadowCorners.push()
+
+  let check = true;
+  let lastCheck = false;
+
+  //while (!((startingX == runningX) && (startingY == runningY)))
+  while (check)
+  {
+    if (checkingDir == 0)
+    {
+      if (shapeBorderSet[get1DIndex(runningY, runningX + 1)] != 1)
+      {
+        corners.push(new Phaser.Geom.Point(runningX, runningY));
+        if (shapeBorderSet[get1DIndex(runningY + 1, runningX)] == 1)
+        {
+          //console.log("up");
+          runningY++;
+          checkingDir = 2;
+          shadowCorners.push(new Phaser.Geom.Point(runningX + shadowWidth, runningY - shadowWidth));
+        }
+        else if (shapeBorderSet[get1DIndex(runningY - 1, runningX)] == 1)
+        {
+          //console.log("down");
+          runningY--;
+          checkingDir = 3;
+          shadowCorners.push(new Phaser.Geom.Point(runningX - shadowWidth, runningY - shadowWidth));
+        }
+        else{
+          runningX++;
+        }
+      }
+      else if (shapeBorderSet[get1DIndex(runningY, runningX + 1)] == 1)
+      {
+        runningX++;
+      }
+    }
+    else if (checkingDir == 1)
+    {
+      if (shapeBorderSet[get1DIndex(runningY, runningX - 1)] != 1)
+      {
+        corners.push(new Phaser.Geom.Point(runningX, runningY));
+        if (shapeBorderSet[get1DIndex(runningY + 1, runningX)] == 1)
+        {
+          //console.log("up");
+          runningY++;
+          checkingDir = 2;
+          shadowCorners.push(new Phaser.Geom.Point(runningX + shadowWidth, runningY + shadowWidth));
+        }
+        else if (shapeBorderSet[get1DIndex(runningY - 1, runningX)] == 1)
+        {
+          //console.log("down");
+          runningY--;
+          checkingDir = 3;
+          shadowCorners.push(new Phaser.Geom.Point(runningX - shadowWidth, runningY + shadowWidth));
+        }
+        else{
+          runningX--;
+        }
+      }
+      else
+      {
+        runningX--;
+      }
+    }
+    else if (checkingDir == 2)
+    {
+      if (shapeBorderSet[get1DIndex(runningY + 1, runningX)] != 1)
+      {
+        corners.push(new Phaser.Geom.Point(runningX, runningY));
+        if (shapeBorderSet[get1DIndex(runningY, runningX + 1)] == 1)
+        {
+          //console.log("right");
+          runningX++;
+          checkingDir = 0;
+          shadowCorners.push(new Phaser.Geom.Point(runningX + shadowWidth, runningY - shadowWidth));
+        }
+        else if (shapeBorderSet[get1DIndex(runningY, runningX - 1)] == 1)
+        {
+          //console.log("left");
+          runningX--;
+          checkingDir = 1;
+          shadowCorners.push(new Phaser.Geom.Point(runningX + shadowWidth, runningY + shadowWidth));
+        }
+        else {
+          runningY++;
+        }
+      }
+      else
+      {
+        runningY++;
+      }
+    }
+    else if (checkingDir == 3)
+    {
+      if (shapeBorderSet[get1DIndex(runningY - 1, runningX)] != 1)
+      {
+        corners.push(new Phaser.Geom.Point(runningX, runningY));
+        if (shapeBorderSet[get1DIndex(runningY, runningX + 1)] == 1)
+        {
+          //console.log("right");
+          runningX++;
+          checkingDir = 0;
+          shadowCorners.push(new Phaser.Geom.Point(runningX - shadowWidth, runningY - shadowWidth));
+        }
+        else if (shapeBorderSet[get1DIndex(runningY, runningX - 1)] == 1)
+        {
+          //console.log("left");
+          runningX--;
+          checkingDir = 1;
+          shadowCorners.push(new Phaser.Geom.Point(runningX - shadowWidth, runningY + shadowWidth));
+        }
+        else {
+          runningY--;
+        }
+      }
+      else
+      {
+        runningY--;
+      }
+    }
+
+    if (lastCheck)
+    {
+      check = false;
+    }
+
+    if ((startingX == runningX) && (startingY == runningY))
+    {
+      lastCheck = true;
+    }
+  }
+
+  //console.log(corners.length);
+ // graphics.fillStyle(0xFFFFFF, 1.0);
+
+  // let thick = graphics.thickness;
+  // let alpha = graphics.alpha;
+  // let color = graphics.color;
+
+ // graphics.lineStyle(50,0xFFFFFF,.8);
+  graphics.fillPoints(corners, true);
+  shadowGraphics.fillPoints(shadowCorners, true);
+
+   //graphics.lineStyle(50,0xFFFFFF,.4);
+   //graphics.strokePoints(corners,true);
+   //graphics.lineStyle(thick,color,alpha);
+
+  //shadowGraphics = graphics.generateTexture("shadow");
+  //shadowSprite.setTexture("shadow");
+
+
+ // let scale =3.1;
+  //shadowSprite.setDisplaySize(shadowSprite.width*scale,shadowSprite.height*scale);
+  //shadowSprite.tint = 0x000000;
+ //shadowSprite.alpha = 0.6;
+
+ console.log("flood end");
+}
+
+
+class fossil extends Phaser.Physics.Arcade.Sprite {
+
+
+  constructor(scene, x = 0, y = 0, texture = 'bone') {
+    var chance = Math.random()*100;
+
+    if(chance<=33)
+    {
+      texture="bone1";
+      super(scene, x, y, texture)
+      this.coverSprite =_this.add.sprite(x, y, 'bone1Buried');
+    }else if(chance<=66)
+    {
+      texture = "bone2";
+      super(scene, x, y, texture)
+      this.coverSprite =_this.add.sprite(x, y, 'bone2Buried');
+    }else{
+      texture = "bone3";
+      super(scene, x, y, texture)
+      this.coverSprite =_this.add.sprite(x, y, 'bone3Buried');
+    }
+
+    this.coverSprite.setDepth(playerLayer-.5);
+    this.setDepth(fossilLayer);
+    scene.add.existing(this)  ;
+    this.detected = false;
+    this.damaged = false;
+    this.rect = this.getBounds();
+
+    scene.events.on('update', this.update, this);
+    var spPart = scene.add.particles('yellow');
+
+    this.spEmitter = spPart.createEmitter({
+      speed: 50,
+      frequency :300,
+      scale: { start: .08, end: .02 },
+    blendMode: 'ADD'
+});
+  spPart.setDepth(particleLayer);
+  this.spEmitter.startFollow(this);
+  this.spEmitter.visible=false;
+  }
+
+  update() {
+    if (!this.damaged)
+    {
+      if (player.x > this.rect.left && player.x < this.rect.right && player.y > this.rect.top && player.y < this.rect.bottom && drawMode == 2)
+      {
+        this.damaged = true;
+        this.detected = true;
+        this.visible = false;
+        score -= punishScore;
+        scoreText.setText("Score: " + score);
+        this.spEmitter.visible=false;
+        this.coverSprite.setDepth(0);
+        boneBreakSound.volume=.5;
+        boneBreakSound.play();
+      }
+    }
+  }
+}
+
+class sparx extends Phaser.Physics.Arcade.Sprite {
+
+
+  constructor(scene, x = 0, y = 0,player, texture = 'sparx') {
+    super(scene, x, y, texture)
+    this.setDepth(UILayer);
+    scene.add.existing(this);
+
+    scene.events.on('update', this.update, this);
+    var sparxPart = scene.add.particles('yellow');
+
+        var sparxEmitter = sparxPart.createEmitter({
+            speed: 3,
+            scale: { start: .08, end: .04 },
+            blendMode: 'ADD'
+        });
+        sparxPart.setDepth(particleLayer);
+        sparxEmitter.startFollow(this);
+
+
+        this.sparxDir=0;
+        this.count =0;
+        this.speedSkip=1;
+
+        this.upAngle=0;
+        this.rightAngle=this.rotation=90*(Math.PI/180);
+        this.downAngle=this.rotation=180*(Math.PI/180);
+        this.leftAngle=this.rotation=270*(Math.PI/180);
+
+  }
+
+  update() {
+
+
+this.count+=1;
+if(this.count<=this.speedSkip)
+{
+  //console.log("skip");
+  return;
+}
+this.count=0;
+
+    let newRow = this.y;
+    let newCol = this.x;
+
+    if(this.sparxDir==0)//right
+    {
+      this.rotation=this.rightAngle;
+        newCol++;
+        if(onBorder(newRow,newCol))
+        {
+          this.x=newCol;
+          this.sparx1Dir;
+
+        }else
+        {
+           if(onBorder(this.y-1, this.x))//check up
+           {
+            this.sparxDir=1;
+           }else if(onBorder(this.y+1, this.x))
+           {
+            this.sparxDir=3;
+           }
+        }
+
+    }else  if(this.sparxDir==1)//up
+    {
+      this.rotation=this.upAngle;
+        newRow--;
+        if(onBorder(newRow,newCol))
+        {
+          this.y=newRow;
+
+        }else
+        {
+            if(onBorder(this.y, this.x-1))//check LEFT
+           {
+            this.sparxDir=2;
+           }else if(onBorder(this.y, this.x+1))
+           {
+            this.sparxDir=0;
+           }
+        }
+
+    }else if(this.sparxDir==2)//left
+    {
+      this.rotation=this.leftAngle;
+        newCol--;
+        if(onBorder(newRow,newCol))
+        {
+          this.x=newCol;
+
+        }else
+        {
+            if(onBorder(this.y+1, this.x))//check down
+           {
+            this.sparxDir=3;
+           }else if(onBorder(this.y-1, this.x))
+           {
+            this.sparxDir=1;
+           }
+        }
+
+    }else if(this.sparxDir==3)//down
+    {
+      this.rotation=this.downAngle;
+        newRow++;
+        if(onBorder(newRow,newCol))
+        {
+          this.y=newRow;
+
+        }else
+        {
+            if(onBorder(this.y, this.x-1))//check left
+           {
+            this.sparxDir=2;
+           }else if(onBorder(this.y, this.x+1))
+           {
+            this.sparxDir=0;
+           }
+        }
+
+    }
+
+
+  }
+
+}
+
+class bomb extends Phaser.Physics.Arcade.Sprite {
+
+  constructor(scene, x = 0, y = 0, texture = 'bomb') {
+    super(scene, x, y, texture)
+    this.setDepth(fossilLayer);
+    scene.add.existing(this)  ;
+    this.detected = false;
+    this.damaged = false;
+    this.setDisplaySize(70,70);
+    this.rect = this.getBounds();
+    this.deathTimer=0;
+    this.explodeTime=100;
+    this.hidden=false;
+    this.coverSprite =_this.add.sprite(x, y, 'bombBuried');
+    this.coverSprite.setDepth(bombLayer);
+    scene.events.on('update', this.update, this);
+    this.spPart = scene.add.particles('red');
+
+    this.spEmitter = this.spPart.createEmitter({
+      speed: 50,
+      frequency :300,
+      scale: { start: .3, end: .02 },
+    blendMode: 'ADD'
+});
+  this.spPart.setDepth(particleLayer);
+  this.spEmitter.startFollow(this);
+
+  }
+
+  update() {
+    if (!this.damaged)
+    {
+      if (player.x > this.rect.left && player.x < this.rect.right && player.y > this.rect.top && player.y < this.rect.bottom && drawMode == 2)
+      {
+        this.damaged = true;
+        this.visible = false;
+        this.spEmitter.visible=false;
+        this.spEmitter = this.spPart.createEmitter({
+      speed: 100,
+      frequency :0,
+      scale: { start: .3, end: .2 },
+    blendMode: 'ADD'
+      });
+        this.spEmitter.startFollow(this);
+        this.coverSprite.setDepth(0);
+        soundBoom.volume = .2;
+        soundBoom.play();
+        this.addBoundsToBorder();
+        killPlayer();
+      }
+    }else
+    {
+      this.deathTimer++;
+    }
+
+    if(this.deathTimer>=this.explodeTime && !this.hidden)
+    {
+      this.spEmitter.visible=false;
+    }
+  }
+
+  addBoundsToBorder()
+  {
+    //removeAllTemporaryBorders();
+    let i=0;
+    for(i=this.rect.left;i<=this.rect.right;i++)
+    {
+      border[get1DIndex(this.rect.top,i)]=2;
+      border[get1DIndex(this.rect.bottom,i)]=2;
+    }
+
+    for(i=this.rect.top;i<=this.rect.bottom;i++)
+    {
+      border[get1DIndex(i,this.rect.left)]=2;
+      border[get1DIndex(i,this.rect.right)]=2;
+    }
+    processCapture(true);
+
+  }
+
+  explode()
+  {
+
+    this.coverSprite.setDepth(0);
+    this.damaged = true;
+    this.visible = false;
+    this.spEmitter.visible=false;
+    this.coverSprite.setDepth(0);
+    this.spEmitter = this.spPart.createEmitter({
+  speed: 100,
+  frequency :0,
+  scale: { start: .3, end: .2 },
+blendMode: 'ADD'
+  });
+this.spEmitter.startFollow(this);
+    this.addBoundsToBorder();
+    killPlayer();
+    soundBoom.volume = .4;
+        soundBoom.play();
+  }
+
+}
+
+class enemySegment extends Phaser.Physics.Arcade.Sprite
+{
+  constructor(scene, x = 0, y = 0, texture = '') {
+    super(scene, x, y, texture);
+    this.setDepth(playerLayer);
+    this.setDisplaySize(100,100);
+    this.spacing =35;
+
+    scene.add.existing(this);
+    scene.events.on('update', this.update, this);
+    this.followX = this.x - this.spacing;
+    this.followY = this.y + this.spacing;
+
+  }
+
+  move(followDirectionX, followDirectionY)
+  {
+    this.x += followDirectionX;
+    this.y += followDirectionY;
+    this.followX += (this.x - this.followX) * Math.sqrt(2 / (this.spacing*this.spacing*2));
+    this.followY += (this.y - this.followY) * Math.sqrt(2 / (this.spacing*this.spacing*2));
+
+    if(isTemporary(Math.round(this.y),Math.round(this.x)))
+    {
+        killPlayer();
+    }
+
+    if(followDirectionX > 0)
+    {
+      if(followDirectionY > 0)
+      {
+        this.rotation=135*(Math.PI/180);
+
+      }else if(followDirectionY < 0)
+      {
+        this.rotation=45*(Math.PI/180);
+      }
+
+    }else if(followDirectionX < 0)
+    {
+      if(followDirectionY > 0)
+      {
+        this.rotation=225*(Math.PI/180);
+      }else if(followDirectionY < 0)
+      {
+        this.rotation=315*(Math.PI/180);
+      }
+    }
+  }
+
+  moveTowards(followDirectionX, followDirectionY, parentX, parentY)
+  {
+    this.x += followDirectionX;
+    this.y += followDirectionY;
+    this.followX += (this.x - this.followX) * Math.sqrt(2 / (this.spacing*this.spacing*2));
+    this.followY += (this.y - this.followY) * Math.sqrt(2 / (this.spacing*this.spacing*2));
+
+    if(isTemporary(Math.round(this.y),Math.round(this.x)))
+    {
+        killPlayer();
+    }
+
+    if(parentX - this.x > 0)
+    {
+      if(parentY - this.y > 0)
+      {
+        this.rotation=135*(Math.PI/180);
+
+      }else
+      {
+        this.rotation=45*(Math.PI/180);
+      }
+
+    }else
+    {
+      if(parentY - this.y > 0)
+      {
+        this.rotation=225*(Math.PI/180);
+      }else
+      {
+        this.rotation=315*(Math.PI/180);
+      }
+    }
+  }
+
+  update() {
+
+  }
+
+
+}
+
+class enemyChain
+{
+  constructor(scene, x = 0, y = 0, size =1) {
+    //super(scene, x, y, texture)
+    this.chain = [];
+    this.x = x;
+    this.y = y;
+    let i=1;
+    this.chain.push(new enemySegment(scene, x, y,"enemyHead").setDepth(playerLayer+.5));
+    this.spPart = scene.add.particles('brown');
+
+    this.spEmitter = this.spPart.createEmitter({
+      speed: 20,
+      frequency :100,
+      scale: { start: .5, end: 0 },
+    blendMode: 'ADD'
+});
+  this.spPart.setDepth(particleLayer);
+  this.spEmitter.startFollow(this);
+
+    for (i = 1; i < size-1; i++) {
+      this.chain.push(new enemySegment(scene, this.chain[i - 1].followX, this.chain[i - 1].followY,"enemyBody").setDepth(playerLayer-(i/100)));
+    }
+    this.chain.push(new enemySegment(scene, this.chain[size-2 - 1].followX, this.chain[size-2 - 1].followY,"enemyTail").setDepth(playerLayer-99.99));
+
+    scene.events.on('update', this.update, this);
+
+    }
+
+
+  update()
+  {
+    for(i=0;i<enemySpeed;i++)
+    {
+      var newCol= this.chain[0].x+enemyDirectionX;
+      var newRow = this.chain[0].y+enemyDirectionY;
+
+        if(onBorder(newRow,newCol))
+        {
+            if((Math.random()*100)<=50)
+            {
+              enemyDirectionX=-enemyDirectionX;
+             }else
+             {
+             enemyDirectionY=-enemyDirectionY;
+             }
+        }else
+        {
+          this.chain[0].move(enemyDirectionX, enemyDirectionY);
+          for (let i = 1; i < this.chain.length; i++) {
+            let tempDirX = this.chain[i - 1].followX - this.chain[i].x;
+            let tempDirY = this.chain[i - 1].followY - this.chain[i].y;
+            let divisor = Math.sqrt(2 / (tempDirX * tempDirX + tempDirY * tempDirY));
+            tempDirX *= divisor;
+            tempDirY *= divisor;
+            this.chain[i].moveTowards(tempDirX, tempDirY, this.chain[i - 1].x, this.chain[i - 1].y);
+          }
+        }
+    }
+
+    if((Math.random()*100)<=3)
+    {
+        if((Math.random()*100)<=50)
+        {
+            enemyDirectionX=-enemyDirectionX;
+        }else
+        {
+            enemyDirectionY=-enemyDirectionY;
+        }
+    }
+
+    this.x = this.chain[0].x;
+    this.y = this.chain[0].y;
+  }
+}
+
+
+
+  </script>
+</body>
+</div>
+</html>
